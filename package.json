@@ -9,9 +9,13 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "d3": "^3.5.17",
+    "next": "14.0.3",
+    "node": "^18.14.0",
+    "numeric": "^1.2.6",
+    "opencv.js": "^1.2.1",
     "react": "^18",
-    "react-dom": "^18",
-    "next": "14.0.3"
+    "react-dom": "^18"
   },
   "devDependencies": {
     "eslint": "^8",
