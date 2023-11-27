@@ -3,6 +3,8 @@ import * as d3 from "d3";
 // Add this line at the top of your trimming/index.js file
 const solve = require('../../pages/_numeric-solve.min.js');
 import styles from './Trimming.module.css';
+import cv from "@techstark/opencv-js"
+
 // Your code here
 // Call the solve function with appropriate arguments
 const style = {
@@ -12,13 +14,26 @@ const style = {
 
 const styleDiv = {
     width: '480px',
+    position: 'relative',
 
+}
+
+const styleButton = {
+    position: 'absolute',
+    left: '10px',
+    marginTop: '10px',
+}
+
+const styleButton2 = {
+    position: 'absolute',
+    left: '100px',
+    marginTop: '10px',
 }
 
 const attachCropBox = function (imgWidth, imgHeight) {
 
     console.log('image loaded : ', imgWidth, ' ', imgHeight);
-    var margin = { top: 100, right: 20, bottom: 20, left: 40 },
+    var margin = { top: 40, right: 20, bottom: 20, left: 40 },
         width = imgWidth - margin.left - margin.right,
         height = imgHeight - margin.top - margin.bottom;
 
@@ -42,7 +57,7 @@ const attachCropBox = function (imgWidth, imgHeight) {
             })))
         .enter().append("path")
         .attr("class", styles.line + " line--x");
-console.log('line ', line)
+    console.log('line ', line)
     var handle = svg.selectAll(".handle")
         .data(targetPoints)
         .enter().append("circle")
@@ -123,6 +138,167 @@ console.log('line ', line)
     }
 };
 
+const loadImageToCanvas = function (url, cavansId) {
+
+    let canvas = document.getElementById(cavansId);
+    let ctx = canvas.getContext('2d');
+    let img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = function () {
+
+        canvas.width = img.width;
+        canvas.height = img.height;
+        console.log('img.height : ' + img.width + ' img.width : ' + img.height);
+
+        ctx.drawImage(img, 0, 0, img.width, img.height);
+    };
+    img.src = url;
+    console.log("image to canvas : ", img.src);
+};
+
+const applyTrimming = (e) => {
+    e.preventDefault()
+
+    const imageUsed = document.getElementById('sample').getAttribute('src')
+    console.log('image used : ', imageUsed);
+    console.log('apply trimming')
+    let pointsArray = [];
+    const children = document.querySelectorAll('#window_g .handle');
+    console.log(children);
+    children.forEach(e => {
+        const pos = e.getAttribute('transform');
+        console.dir("pos : ", pos);
+        const point = pos.replace('translate(', '').replace(')', '').split(',');
+        pointsArray.push(point[0]);
+        pointsArray.push(point[1]);
+    });
+    //console.log("points array : ", pointsArray);
+
+    //load image and set to canvas imageInit
+    loadImageToCanvas(imageUsed, 'imageInit');
+    setTimeout(() => {
+        let src = cv.imread('imageInit');
+        console.log('src : ', src);
+        const imageHeight = document.getElementById('imageInit').height;
+        const imageWidth = document.getElementById('imageInit').width;
+        console.log('perpective h : ', imageHeight, ' perpective w : ', imageWidth);
+
+        //crop svg
+        const svgCropHeight = document.querySelector('#background svg').getAttribute('height') - 80;
+        const svgCropWidth = document.querySelector('#background svg').getAttribute('width') - 80;
+
+        //calculationn ratio
+        var hRatio = (svgCropWidth + 80) / imageWidth;
+        var vRatio = (svgCropHeight + 80) / imageHeight;
+
+        var ratio = Math.min(hRatio, vRatio);
+
+        const scaleFactor = imageWidth / (imageWidth * ratio);
+
+        var svgWidth0 = 0;
+        var svgWidth2 = 0;
+        var svgHeight3 = 0;
+        var svgHeight5 = 0;
+
+        //scale factor for 3:4 -> 5.6
+        pointsArray = pointsArray.map((e, index) => {
+            console.log("points ", index, " : ", (((parseInt(e) * scaleFactor) + (scaleFactor * 40))));
+            const num = parseInt(((parseInt(e) * scaleFactor)) + (scaleFactor * 40));
+            if (index === 0) {
+                svgWidth0 = num;
+            } else if (index === 2) {
+                svgWidth2 = num;
+            } else if (index === 3) {
+                svgHeight3 = num;
+            } else if (index === 5) {
+                svgHeight5 = num;
+            }
+            return num;
+        });
+
+        console.log("svg w0:", svgWidth0, " w2:", svgWidth2);
+        console.log("svg h3:", svgHeight3, " h5:", svgHeight5);
+
+        //part 3
+        let dst = new cv.Mat();
+        let dsize = new cv.Size(imageHeight, imageWidth);
+        let srcTri = cv.matFromArray(4, 1, cv.CV_32FC2, pointsArray);
+        let dstTri = cv.matFromArray(4, 1, cv.CV_32FC2, [0, 0, imageHeight, 0, imageHeight, imageWidth, 0, imageWidth]);
+        let M = cv.getPerspectiveTransform(srcTri, dstTri);
+        cv.warpPerspective(src, dst, M, dsize, cv.INTER_LINEAR, cv.BORDER_CONSTANT, new cv.Scalar());
+        document.getElementById('imageInit').style.display = "none";
+
+        // Setup result
+        const svgWidth = (svgWidth2 - svgWidth0);
+        const svgHeight = (svgHeight5 - svgHeight3);
+
+        //if width > height -> landscape means portrait
+        console.log("svg : w:", svgWidth, " | h:", svgHeight);
+
+        const cwidth = 540;
+        const cheight = 720;
+
+        const loadCanvas = function (width, height) {
+            var canvas = document.getElementById("imageResult");
+            canvas.style.width = width + "px";
+            canvas.style.height = height + "px";
+            cv.imshow('imageResult', dst);
+        };
+
+        const loadCanvasHide = function (width, height) {
+            var canvas = document.getElementById("imageResult1");
+            canvas.style.width = width + "px";
+            canvas.style.height = height + "px";
+            cv.imshow('imageResult1', dst);
+            document.getElementById('imageResult1').style.display = "none";
+        };
+
+        if (svgWidth > svgHeight) {
+            loadCanvas(cheight, cwidth);
+            console.log("landscape");
+        } else if (svgHeight > svgWidth) {
+            loadCanvas(cwidth, cheight);
+            console.log("portrait");
+        } else if (svgHeight === svgWidth) {
+            loadCanvas(cwidth, cwidth);
+            console.log("square");
+        }
+
+        if (imageWidth > imageHeight) {
+            if (svgWidth > svgHeight) {
+                loadCanvasHide(imageWidth, imageHeight);
+                console.log("l landscape : w:", imageWidth, " | h:", imageHeight);
+            } else if (svgHeight > svgWidth) {
+                loadCanvasHide(imageHeight, imageWidth);
+                console.log("l portrait : w:", imageWidth, " | h:", imageHeight);
+            } else if (svgHeight === svgWidth) {
+                loadCanvasHide(imageWidth, imageWidth);
+                console.log("l square : w:", imageWidth, " | h:", imageHeight);
+            }
+        } else if (imageHeight > imageWidth) {
+            if (svgWidth > svgHeight) {//this only call when image portrait but crop svg is landscape
+                loadCanvasHide(imageHeight, imageWidth);
+                console.log("p landscape : w:", imageWidth, " | h:", imageHeight);
+            } else if (svgHeight > svgWidth) {
+                loadCanvasHide(imageWidth, imageHeight);
+                console.log("p portrait : w:", imageWidth, " | h:", imageHeight);
+            } else if (svgWidth === svgHeight) {//this only call when image portrait but crop svg is square
+                loadCanvasHide(imageWidth, imageWidth);
+                console.log("p square : w:", imageWidth, " | h:", imageHeight);
+            }
+        } else if (imageHeight === imageWidth) {
+            //            loadCanvasHide(imageWidth, imageWidth);
+            loadCanvasHide(svgWidth, svgHeight);
+        }
+
+        src.delete();
+        dst.delete();
+        M.delete();
+        srcTri.delete();
+        dstTri.delete();
+    }, 500);
+}
+
 const Trimming = () => {
     const canvasRef = useRef(null)
 
@@ -132,42 +308,56 @@ const Trimming = () => {
         const canvas = canvasRef.current
         const ctx = canvas.getContext('2d')
         let img = new Image()
-        let imageElement = document.getElementById('im');
+        var imageSrc = document.getElementById('im').src;
 
-        console.log('imgload')
-        img.src = imageElement.src
-        let im = document.createElement('img')
-        im.src = imageElement.src
-        im.id = "sample";
-        let imageDiv = document.getElementById('background')
-        imageDiv.appendChild(im)
-        document.getElementById('sample').style.display = 'none'
-        document.getElementById('im').style.display = 'none'
+        var request = new XMLHttpRequest();
+        request.open('GET', imageSrc, true);
+        request.responseType = 'blob';
+        request.onload = function () {
+            var fileReader = new FileReader();
+            fileReader.readAsDataURL(request.response);
+            fileReader.onload = function (e) {
+    //            console.log('DataURL:', e.target.result);
+                img.src = fileReader.result;
+                var im = document.createElement("img");
+                im.src = fileReader.result;
+                im.id = "sample";
+                var imageDiv = document.getElementById("background");
+                imageDiv.appendChild(im); // add element img 
+                document.getElementById('sample').style.display = "none";
+                document.getElementById('im').style.display = 'none'
+                img.onload = function () {
 
-        if (im.width > 540) {
-            if (im.width > im.height) {
-                canvas.width = 560;
-                canvas.height = 450;
-            } else {
-                canvas.width = 540;
-                canvas.height = 720;
-            }
-        } else {
-            canvas.width = im.width;
-            canvas.height = im.height;
-        }
-
-        const imgWidth = img.width
-        const imgHeight = img.height
-
-        let hRatio = canvas.width / imgWidth;
-        let vRatio = canvas.height / imgHeight;
-
-        let ratio = Math.min(hRatio, vRatio);
-
-        ctx.drawImage(img, 0, 0, imgWidth, imgHeight, 0, 0, imgWidth * ratio, imgHeight * ratio);
-
-        attachCropBox(imgWidth * ratio, imgHeight * ratio)
+                    if (im.width > 540) {
+                        if (im.width > im.height) {
+                            canvas.width = 560;
+                            canvas.height = 450;
+                        } else {
+                            canvas.width = 540;
+                            canvas.height = 720;
+                        }
+                    } else {
+                        canvas.width = im.width;
+                        canvas.height = im.height;
+                    }
+    
+        
+                    //calc ratio
+                    var hRatio = canvas.width / img.width;
+                    var vRatio = canvas.height / img.height;
+    
+                    var ratio = Math.min(hRatio, vRatio);
+    
+                    //draw the image 
+                    ctx.drawImage(img, 0, 0, img.width, img.height, 0, 0, img.width * ratio, img.height * ratio);
+               
+                    attachCropBox(img.width * ratio, img.height * ratio);
+    
+                  
+                };
+            };
+        };
+        request.send();
 
     }
 
@@ -175,10 +365,19 @@ const Trimming = () => {
         <div>
             <h1>Trimming</h1>
 
-            <div style={styleDiv} id="background">
-                <img id='im' style={style} src="https://dev-api.jhia.academy/api/file/imagenotoken/type/review_image_member/filename/20230508-130228-37.jpg" alt="Trimming" />
-                <canvas ref={canvasRef} />
-                <button onClick={(e) => loadGrid(e)}>load grid</button>
+            <div style={{ display: 'flex' }}>
+                <div style={styleDiv} id="background">
+                    <img id='im' style={style} src="https://dev-api.jhia.academy/api/file/imagenotoken/type/review_image_member/filename/20230508-130228-37.jpg" alt="Trimming" />
+                    <canvas ref={canvasRef} />
+                    <button style={styleButton} onClick={(e) => loadGrid(e)}>load grid</button>
+                    <button style={styleButton2} onClick={(e) => applyTrimming(e)}>Trimming</button>
+                </div>
+                <div style={styleDiv} id="background">
+                    <canvas id="imageInit"></canvas>
+                    <canvas id="imageResult"></canvas>
+                    <canvas id="imageResult1"></canvas>
+                </div>
+
             </div>
 
         </div>
