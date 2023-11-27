@@ -9,16 +9,21 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@techstark/opencv-js": "^4.8.0-release.10",
     "d3": "^3.5.17",
     "next": "14.0.3",
     "node": "^18.14.0",
     "numeric": "^1.2.6",
-    "opencv.js": "^1.2.1",
     "react": "^18",
     "react-dom": "^18"
   },
   "devDependencies": {
     "eslint": "^8",
     "eslint-config-next": "14.0.3"
+  },
+  "browser": {
+    "fs": false,
+    "path": false,
+    "os": false
   }
 }
