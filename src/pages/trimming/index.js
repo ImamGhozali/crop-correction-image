@@ -29,6 +29,11 @@ const styleButton2 = {
     left: '100px',
     marginTop: '10px',
 }
+const styleButton3 = {
+    position: 'absolute',
+    left: '200px',
+    marginTop: '10px',
+}
 
 const attachCropBox = function (imgWidth, imgHeight) {
 
@@ -299,6 +304,55 @@ const applyTrimming = (e) => {
     }, 500);
 }
 
+const download = (e) => {
+    e.preventDefault()
+    console.log('download')
+
+    let canvas = document.getElementById('imageResult1');
+
+    let canvasWidth, canvasHeight;
+    let tempW = parseInt(canvas.style.width.replace("px", ""));
+    let tempH = parseInt(canvas.style.height.replace("px", ""));
+
+    console.log("canvas ", canvas.width, canvas.height)
+    console.log("tempCanvas ", tempW, tempH)
+    //
+    if (tempW > tempH) {
+        // Landscape
+        const targetRatio = 4 / 3;
+        if (tempW / tempH > targetRatio) {
+            canvasWidth = tempH * targetRatio;
+            canvasHeight = tempH;
+        } else {
+            canvasWidth = tempW;
+            canvasHeight = tempW / targetRatio;
+        }
+    } else {
+        // Portrait
+        const targetRatio = 3 / 4;
+        if (tempW / tempH > targetRatio) {
+            canvasWidth = tempH * targetRatio;
+            canvasHeight = tempH;
+        } else {
+            canvasWidth = tempW;
+            canvasHeight = tempW / targetRatio;
+        }
+    }
+
+    // Create copy and adjust new width and height
+    let tempCanvas = document.createElement("canvas");
+    tempCanvas.width = canvasWidth;
+    tempCanvas.height = canvasHeight;
+    let tempCtx = tempCanvas.getContext("2d");
+    console.log('tempCanvas ', tempCanvas.width, ' ', tempCanvas.height)
+    tempCtx.drawImage(canvas, 0, 0, tempCanvas.width, tempCanvas.height);
+
+    // Generate download url
+    const download = tempCanvas.toDataURL('image/jpg');
+    console.log("base 64", download)
+
+}
+
 const Trimming = () => {
     const canvasRef = useRef(null)
 
@@ -317,7 +371,7 @@ const Trimming = () => {
             var fileReader = new FileReader();
             fileReader.readAsDataURL(request.response);
             fileReader.onload = function (e) {
-    //            console.log('DataURL:', e.target.result);
+                //            console.log('DataURL:', e.target.result);
                 img.src = fileReader.result;
                 var im = document.createElement("img");
                 im.src = fileReader.result;
@@ -340,20 +394,20 @@ const Trimming = () => {
                         canvas.width = im.width;
                         canvas.height = im.height;
                     }
-    
-        
+
+
                     //calc ratio
                     var hRatio = canvas.width / img.width;
                     var vRatio = canvas.height / img.height;
-    
+
                     var ratio = Math.min(hRatio, vRatio);
-    
+
                     //draw the image 
                     ctx.drawImage(img, 0, 0, img.width, img.height, 0, 0, img.width * ratio, img.height * ratio);
-               
+
                     attachCropBox(img.width * ratio, img.height * ratio);
-    
-                  
+
+
                 };
             };
         };
@@ -370,7 +424,8 @@ const Trimming = () => {
                     <img id='im' style={style} src="https://dev-api.jhia.academy/api/file/imagenotoken/type/review_image_member/filename/20230508-130228-37.jpg" alt="Trimming" />
                     <canvas ref={canvasRef} />
                     <button style={styleButton} onClick={(e) => loadGrid(e)}>load grid</button>
-                    <button style={styleButton2} onClick={(e) => applyTrimming(e)}>Trimming</button>
+                    <button style={styleButton2} onClick={(e) => applyTrimming(e)}>trimming</button>
+                    <button style={styleButton3} onClick={(e) => download(e)}>download</button>
                 </div>
                 <div style={styleDiv} id="background">
                     <canvas id="imageInit"></canvas>
