@@ -31,7 +31,7 @@ const styleButton2 = {
 }
 const styleButton3 = {
     position: 'absolute',
-    left: '200px',
+    left: '190px',
     marginTop: '10px',
 }
 export const IMAGE_API = process.env.IMAGE_API;
