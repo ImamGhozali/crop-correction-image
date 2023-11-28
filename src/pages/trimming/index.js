@@ -34,6 +34,7 @@ const styleButton3 = {
     left: '200px',
     marginTop: '10px',
 }
+export const IMAGE_API = process.env.IMAGE_API;
 
 const attachCropBox = function (imgWidth, imgHeight) {
 
@@ -354,6 +355,7 @@ const download = (e) => {
 }
 
 const Trimming = () => {
+    console.log('api : ', IMAGE_API)
     const canvasRef = useRef(null)
 
     const loadGrid = (e) => {
@@ -421,7 +423,7 @@ const Trimming = () => {
 
             <div style={{ display: 'flex' }}>
                 <div style={styleDiv} id="background">
-                    <img id='im' style={style} src="https://dev-api.jhia.academy/api/file/imagenotoken/type/review_image_member/filename/20230508-130228-37.jpg" alt="Trimming" />
+                    <img id='im' style={style} src={IMAGE_API} alt="Trimming" />
                     <canvas ref={canvasRef} />
                     <button style={styleButton} onClick={(e) => loadGrid(e)}>load grid</button>
                     <button style={styleButton2} onClick={(e) => applyTrimming(e)}>trimming</button>
